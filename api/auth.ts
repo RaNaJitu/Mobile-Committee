@@ -1,6 +1,8 @@
 import type { LoginFormValues, SignupFormValues } from "@/types/auth";
 
-const BASE_URL = "http://10.255.253.32:4000/api/v1";
+import { API_BASE_URL } from "@/config/env";
+
+const BASE_URL = API_BASE_URL;
 const REGISTER_PATH = "/auth/register";
 const LOGIN_PATH = "/auth/login";
 const LOGOUT_PATH = "/auth/logout";

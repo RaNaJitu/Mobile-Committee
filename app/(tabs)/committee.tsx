@@ -1,9 +1,9 @@
 import React from "react";
 
-import DashboardScreen from "@/screens/DashboardScreen";
+import CommitteeListScreen from "@/screens/CommitteeListScreen";
 
 const Committee = (): React.JSX.Element => {
-  return <DashboardScreen />;
+  return <CommitteeListScreen />;
 };
 
 export default Committee;

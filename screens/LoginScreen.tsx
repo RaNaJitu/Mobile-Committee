@@ -23,6 +23,28 @@ import type {
   UserRole,
 } from "@/types/auth";
 
+const extractToken = (response: any): string | null => {
+  const candidates = [
+    response?.token,
+    response?.accessToken,
+    response?.jwt,
+    response?.data?.token,
+    response?.data?.accessToken,
+    response?.data?.jwt,
+    response?.data?.data?.token,
+    response?.data?.data?.accessToken,
+    response?.data?.data?.jwt,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+};
+
 const LoginScreen = (): React.JSX.Element => {
   const router = useRouter();
   const { setAuth } = useAuth();
@@ -60,28 +82,27 @@ const LoginScreen = (): React.JSX.Element => {
       const response = await loginUser(payload);
       console.log("Login success", response);
 
-       // Try to extract token and user info from the response,
-       // but fall back to the form values if needed.
-       const anyResponse = response as any;
-       const token: string =
-         anyResponse?.token ??
-         anyResponse?.accessToken ??
-         anyResponse?.data?.token ??
-         "";
+      // Try to extract token and user info from the response,
+      // but fall back to the form values if needed.
+      const anyResponse = response as any;
+      const token = extractToken(anyResponse);
+      const responseUser =
+        anyResponse?.data?.user ??
+        anyResponse?.data?.data?.user ??
+        anyResponse?.data?.data ??
+        anyResponse?.user ??
+        anyResponse?.data;
 
-       const responseUser =
-         anyResponse?.data?.user ?? anyResponse?.user ?? anyResponse?.data;
-
-       setAuth({
-         token,
-         user: {
-           name: responseUser?.name ?? null,
-           email: responseUser?.email ?? null,
-           phoneNo: responseUser?.phoneNo ?? payload.phoneNumber ?? null,
-           role: responseUser?.role ?? null,
-         },
-         password: payload.password,
-       });
+      setAuth({
+        token: token ?? "",
+        user: {
+          name: responseUser?.name ?? null,
+          email: responseUser?.email ?? null,
+          phoneNo: responseUser?.phoneNo ?? payload.phoneNumber ?? null,
+          role: responseUser?.role ?? null,
+        },
+        password: payload.password,
+      });
 
       Alert.alert("Success", "Logged in successfully.");
       router.replace("/(tabs)/committee");
@@ -113,14 +134,16 @@ const LoginScreen = (): React.JSX.Element => {
       console.log("Sign up success", response);
 
       const anyResponse = response as any;
-      const token: string =
-        anyResponse?.token ?? anyResponse?.accessToken ?? anyResponse?.data?.token ?? "";
-
+      const token = extractToken(anyResponse);
       const responseUser =
-        anyResponse?.data?.user ?? anyResponse?.user ?? anyResponse?.data;
+        anyResponse?.data?.user ??
+        anyResponse?.data?.data?.user ??
+        anyResponse?.data?.data ??
+        anyResponse?.user ??
+        anyResponse?.data;
 
       setAuth({
-        token,
+        token: token ?? "",
         user: {
           name: responseUser?.name ?? payload.fullName,
           email: responseUser?.email ?? payload.email,
