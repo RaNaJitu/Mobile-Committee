@@ -1,10 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   ListRenderItem,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,6 +59,64 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
   const [drawsLoading, setDrawsLoading] = useState(false);
   const [drawsError, setDrawsError] = useState<string | null>(null);
   const [drawsLoadedOnce, setDrawsLoadedOnce] = useState(false);
+
+  // Timer modal state
+  const [timerModalVisible, setTimerModalVisible] = useState(false);
+  const [selectedDraw, setSelectedDraw] = useState<CommitteeDrawItem | null>(null);
+  const [timerMinutes, setTimerMinutes] = useState(1);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [lastAnnouncedTime, setLastAnnouncedTime] = useState<number>(-1);
+  
+  // Refs to track current timer values for voice announcements
+  const timerMinutesRef = useRef(1);
+  const timerSecondsRef = useRef(0);
+  const femaleVoiceRef = useRef<string | null>(null);
+
+  // Get available voices and select female voice
+  useEffect(() => {
+    const getFemaleVoice = async () => {
+      try {
+        const voices = await Speech.getAvailableVoicesAsync();
+        // Try to find a female voice by name patterns
+        const femaleVoice = voices.find(
+          (voice) => {
+            const name = voice.name?.toLowerCase() || "";
+            return (
+              name.includes("female") ||
+              name.includes("samantha") ||
+              name.includes("karen") ||
+              name.includes("susan") ||
+              name.includes("victoria") ||
+              name.includes("zira") ||
+              name.includes("kate") ||
+              name.includes("sarah") ||
+              name.includes("emily") ||
+              name.includes("linda") ||
+              name.includes("helen")
+            );
+          }
+        );
+        
+        if (femaleVoice) {
+          femaleVoiceRef.current = femaleVoice.identifier;
+        } else if (voices.length > 0) {
+          // Fallback: use a voice that might be female (often index 1 or higher, avoid "male" in name)
+          const possibleFemaleVoice = voices.find(
+            (voice, index) => {
+              const name = voice.name?.toLowerCase() || "";
+              return index > 0 && !name.includes("male") && !name.includes("david") && !name.includes("daniel");
+            }
+          ) || (voices.length > 1 ? voices[1] : voices[0]);
+          femaleVoiceRef.current = possibleFemaleVoice.identifier;
+        }
+      } catch (error) {
+        console.error("Error getting voices:", error);
+      }
+    };
+    
+    void getFemaleVoice();
+  }, []);
 
   useEffect(() => {
     const loadMembers = async () => {
@@ -152,6 +212,183 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
 
   const handleBack = () => {
     router.back();
+  };
+
+  // Timer functions
+  const handleTimerPress = (draw: CommitteeDrawItem) => {
+    setSelectedDraw(draw);
+    setTimerMinutes(1);
+    setTimerSeconds(0);
+    timerMinutesRef.current = 1;
+    timerSecondsRef.current = 0;
+    setIsTimerRunning(false);
+    setTimerModalVisible(true);
+  };
+
+  const handleStartTimer = () => {
+    // If timer is at 0, reset it to 1:00
+    if (timerMinutes === 0 && timerSeconds === 0) {
+      setTimerMinutes(1);
+      setTimerSeconds(0);
+      timerMinutesRef.current = 1;
+      timerSecondsRef.current = 0;
+    }
+    setLastAnnouncedTime(-1); // Reset announcement tracking
+    setIsTimerRunning(true);
+    // Announce "time is start" when timer starts
+    const voiceOptions: Speech.SpeechOptions = {
+      language: "en",
+      pitch: 1.5, // Higher pitch for female voice
+      rate: 0.9,
+    };
+    if (femaleVoiceRef.current) {
+      voiceOptions.voice = femaleVoiceRef.current;
+    }
+    Speech.speak("time is start", voiceOptions);
+  };
+
+  const handleResetTimer = () => {
+    // Reset timer to 01:00 and start it again
+    setTimerMinutes(1);
+    setTimerSeconds(0);
+    timerMinutesRef.current = 1;
+    timerSecondsRef.current = 0;
+    setLastAnnouncedTime(-1); // Reset announcement tracking
+    setIsTimerRunning(true);
+    // Announce "time is start" when timer resets and starts
+    const voiceOptions: Speech.SpeechOptions = {
+      language: "en",
+      pitch: 1.5, // Higher pitch for female voice
+      rate: 0.9,
+    };
+    if (femaleVoiceRef.current) {
+      voiceOptions.voice = femaleVoiceRef.current;
+    }
+    Speech.speak("time is start", voiceOptions);
+  };
+
+  const handleCloseModal = () => {
+    setTimerModalVisible(false);
+    setIsTimerRunning(false);
+    setTimerMinutes(1);
+    setTimerSeconds(0);
+    timerMinutesRef.current = 1;
+    timerSecondsRef.current = 0;
+    setLastAnnouncedTime(-1); // Reset announcement tracking
+    Speech.stop(); // Stop any ongoing speech
+  };
+
+  // Update refs when state changes
+  useEffect(() => {
+    timerMinutesRef.current = timerMinutes;
+    timerSecondsRef.current = timerSeconds;
+  }, [timerMinutes, timerSeconds]);
+
+  // Timer countdown effect with voice announcements
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    
+    if (isTimerRunning && timerModalVisible) {
+      interval = setInterval(() => {
+        setTimerSeconds((prevSeconds) => {
+          const newSeconds = prevSeconds > 0 ? prevSeconds - 1 : 59;
+          const currentMinutes = timerMinutesRef.current;
+          // Calculate total seconds remaining (after this tick)
+          const totalSeconds = currentMinutes * 60 + (prevSeconds > 0 ? prevSeconds - 1 : (currentMinutes > 0 ? 59 : 0));
+          
+          // Voice announcements with female voice
+          const voiceOptions: Speech.SpeechOptions = {
+            language: "en",
+            pitch: 1.5, // Higher pitch for female voice
+            rate: 0.9,
+          };
+          if (femaleVoiceRef.current) {
+            voiceOptions.voice = femaleVoiceRef.current;
+          }
+          
+          if (totalSeconds <= 5 && totalSeconds > 0) {
+            // Countdown for last 5 seconds: "5", "4", "3", "2", "1"
+            setLastAnnouncedTime((prev) => {
+              if (totalSeconds !== prev) {
+                Speech.speak(`${totalSeconds}`, voiceOptions);
+                return totalSeconds;
+              }
+              return prev;
+            });
+          } else if (totalSeconds > 5 && totalSeconds % 5 === 0) {
+            // Announce every 5 seconds: "you have left 55 seconds", "50 seconds", etc.
+            setLastAnnouncedTime((prev) => {
+              if (totalSeconds !== prev) {
+                const announcement = `you have left ${totalSeconds} seconds`;
+                Speech.speak(announcement, voiceOptions);
+                return totalSeconds;
+              }
+              return prev;
+            });
+          }
+          
+          // Announce "end time" when timer reaches 0
+          if (totalSeconds === 0) {
+            setLastAnnouncedTime((prev) => {
+              if (prev !== 0) {
+                Speech.speak("end time", voiceOptions);
+                return 0;
+              }
+              return prev;
+            });
+          }
+          
+          if (prevSeconds > 0) {
+            return newSeconds;
+          } else {
+            setTimerMinutes((prevMinutes) => {
+              if (prevMinutes > 0) {
+                return prevMinutes - 1;
+              } else {
+                setIsTimerRunning(false);
+                return 0;
+              }
+            });
+            return 59;
+          }
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isTimerRunning, timerModalVisible]);
+
+  // Format date helper
+  const formatDrawDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "-";
+    
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${day} ${month} ${year}`;
+  };
+
+  // Format time helper
+  const formatDrawTime = (timeString: string): string => {
+    const time = new Date(timeString);
+    if (Number.isNaN(time.getTime())) return "-";
+    
+    const hours = time.getHours();
+    const minutes = time.getMinutes();
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 || 12;
+    
+    if (minutes === 0) {
+      return `${displayHours}${period}`;
+    }
+    return `${displayHours}:${minutes.toString().padStart(2, "0")}${period}`;
   };
 
   const baseName =
@@ -359,6 +596,13 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       const formattedPaidAmount = item.committeeDrawPaidAmount.toLocaleString();
       const formattedMinAmount = item.committeeDrawMinAmount.toLocaleString();
 
+      // Check if draw date is in the future (draw not started yet)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+      const drawDateOnly = new Date(drawDate);
+      drawDateOnly.setHours(0, 0, 0, 0);
+      const isDrawNotStarted = !Number.isNaN(drawDateOnly.getTime()) && drawDateOnly > today;
+
       const handleDrawPress = () => {
         console.log("Draw card pressed:", { committeeId, drawId: item.id });
         router.push(
@@ -388,20 +632,36 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
             <View style={styles.drawDetailRow}>
               <Text style={styles.drawLabel}>Max amount:</Text>
               <Text style={styles.drawValue}>₹ {formattedMinAmount}</Text>
-              <View
-              style={[
-                styles.timerPill,
-              ]}
-            >
-                <Text
-                  style={[
-                    styles.statusText,
-                    {color: "#FFD700"},
-                  ]}
+              {isDrawNotStarted ? (
+                <View style={styles.drawNotStartedPill}>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {color: colors.textSecondary},
+                    ]}
+                  >
+                    {"Draw not started yet"}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.timerPill}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleTimerPress(item);
+                  }}
+                  activeOpacity={0.7}
                 >
-                  {"Timer"}
-                </Text>
-            </View>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {color: "#FFD700"},
+                    ]}
+                  >
+                    {"Timer"}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </TouchableOpacity>
@@ -532,6 +792,79 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
               : renderDraws()}
         </View>
       </View>
+
+      {/* Timer Modal */}
+      <Modal
+        visible={timerModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedDraw ? formatDrawDate(selectedDraw.committeeDrawDate) : ""} DRAW TIMER
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseModal}
+                style={styles.modalCloseButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Instructional Text */}
+            <Text style={styles.modalInstruction}>
+              Complete this draw within the time shown below
+            </Text>
+
+            {/* Timer Display */}
+            <View style={styles.timerContainer}>
+              <View style={styles.timerBox}>
+                <Text style={styles.timerNumber}>
+                  {timerMinutes.toString().padStart(2, "0")}
+                </Text>
+                <Text style={styles.timerLabel}>MIN</Text>
+              </View>
+              <Text style={styles.timerColon}>:</Text>
+              <View style={styles.timerBox}>
+                <Text style={styles.timerNumber}>
+                  {timerSeconds.toString().padStart(2, "0")}
+                </Text>
+                <Text style={styles.timerLabel}>SEC</Text>
+              </View>
+            </View>
+
+            {/* Start/Reset Timer Button */}
+            <TouchableOpacity
+              style={styles.startTimerButton}
+              onPress={isTimerRunning ? handleResetTimer : handleStartTimer}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.startTimerButtonText}>
+                {isTimerRunning
+                  ? "Reset Timer"
+                  : timerMinutes === 0 && timerSeconds === 0
+                    ? "Restart Timer"
+                    : "Start Timer"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Draw Details */}
+            <View style={styles.modalDrawDetails}>
+              <Text style={styles.modalDrawDetailText}>
+                Draw date: {selectedDraw ? formatDrawDate(selectedDraw.committeeDrawDate) : "-"}
+              </Text>
+              <Text style={styles.modalDrawDetailText}>
+                Draw time: {selectedDraw ? formatDrawTime(selectedDraw.committeeDrawTime) : "-"}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -798,15 +1131,129 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   timerPill: {
-      borderColor: "#FFD700",
-      backgroundColor: "rgba(224, 203, 15, 0.12)",
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      borderWidth: 1,
-      marginLeft: "auto",
-      alignSelf: "flex-start",
-    },
+    borderColor: "#FFD700",
+    backgroundColor: "rgba(224, 203, 15, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: "auto",
+    alignSelf: "flex-start",
+  },
+  drawNotStartedPill: {
+    borderColor: colors.border,
+    backgroundColor: colors.inputBackground,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: "auto",
+    alignSelf: "flex-start",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#8B9FFF",
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: colors.textSecondary,
+    fontWeight: "600",
+  },
+  modalInstruction: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  timerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  timerBox: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  timerNumber: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  timerLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  timerColon: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginHorizontal: 8,
+  },
+  startTimerButton: {
+    backgroundColor: "#FFD700",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  startTimerButtonDisabled: {
+    opacity: 0.6,
+  },
+  startTimerButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1B1235",
+  },
+  modalDrawDetails: {
+    alignItems: "center",
+    gap: 4,
+  },
+  modalDrawDetailText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
 });
 
 export default CommitteeAnalysisScreen;
