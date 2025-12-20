@@ -1,5 +1,5 @@
-import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { fetchDrawUserWisePaid } from "@/api/committee";
+import { fetchDrawUserWisePaid, updateDrawUserWisePaid } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type { DrawUserWisePaidItem } from "@/types/committee";
@@ -31,20 +31,19 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
   const [items, setItems] = useState<DrawUserWisePaidItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!token || Number.isNaN(committeeId) || Number.isNaN(drawId)) {
-        setError("Missing draw context. Please reopen from the list.");
-        return;
-      }
+  const loadData = async () => {
+    if (!token || Number.isNaN(committeeId) || Number.isNaN(drawId)) {
+      setError("Missing draw context. Please reopen from the list.");
+      return;
+    }
 
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchDrawUserWisePaid(token, committeeId, drawId);
-        setItems(response.data ?? []);
-      // Update the error handling section (lines 47-53):
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchDrawUserWisePaid(token, committeeId, drawId);
+      setItems(response.data ?? []);
     } catch (err) {
       console.error("Failed to load draw user-wise paid", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to load draw user-wise paid data.";
@@ -56,15 +55,43 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
         setError(errorMessage);
       }
     } finally {
-        setLoading(false);
-      }
-    };
+      setLoading(false);
+    }
+  };
 
-    void load();
+  useEffect(() => {
+    void loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, committeeId, drawId]);
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleMakePaid = async (item: DrawUserWisePaidItem) => {
+    if (!token || updatingUserId === item.userId) {
+      return;
+    }
+
+    try {
+      setUpdatingUserId(item.userId);
+      await updateDrawUserWisePaid(
+        token,
+        item.committeeId,
+        item.userId,
+        item.drawId,
+        item.user.userDrawAmountPaid,
+      );
+      
+      // Reload the data to show updated values
+      await loadData();
+    } catch (err) {
+      console.error("Failed to update payment", err);
+      const errorMessage = err instanceof Error ? err.message : "Unable to update payment.";
+      setError(errorMessage);
+    } finally {
+      setUpdatingUserId(null);
+    }
   };
 
   const renderItem: ListRenderItem<DrawUserWisePaidItem> = ({ item }) => {
@@ -97,11 +124,18 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
               <Text style={styles.amountLabel}>Total Amount Paid:</Text>
               <Text style={styles.amountValue}>₹{formattedTotalAmount}</Text>
             </View>
-            <View
+            <TouchableOpacity
               style={[
                 styles.timerPill,
+                updatingUserId === item.userId && styles.timerPillDisabled,
               ]}
+              onPress={() => handleMakePaid(item)}
+              disabled={updatingUserId === item.userId}
+              activeOpacity={0.7}
             >
+              {updatingUserId === item.userId ? (
+                <ActivityIndicator size="small" color="#FFD700" />
+              ) : (
                 <Text
                   style={[
                     styles.statusText,
@@ -110,7 +144,8 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
                 >
                   {"Make Paid"}
                 </Text>
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
         <View >
@@ -287,6 +322,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginLeft: "auto",
     alignSelf: "flex-start",
+    minWidth: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timerPillDisabled: {
+    opacity: 0.6,
   },
   statusText: {
     fontSize: 11,

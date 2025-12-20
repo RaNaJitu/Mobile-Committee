@@ -182,3 +182,49 @@ export async function fetchDrawUserWisePaid(
   return data as DrawUserWisePaidResponse;
 }
 
+export async function updateDrawUserWisePaid(
+  token: string,
+  committeeId: number,
+  userId: number,
+  drawId: number,
+  userDrawAmountPaid: number,
+): Promise<{ success: boolean; message?: string }> {
+  const url = `${BASE_URL}${COMMITTEE_DRAW_USER_WISE_PAID_PATH}`;
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "*/*",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      committeeId,
+      userId,
+      drawId,
+      userDrawAmountPaid,
+    }),
+  });
+
+  const data = await response
+    .json()
+    .catch(
+      () =>
+        null,
+    ) as { success?: boolean; message?: string; error?: string } | null;
+
+  if (!response.ok) {
+    const message =
+      (data && typeof data === "object" && ("message" in data || "error" in data)
+        ? (data as any).message ?? (data as any).error
+        : undefined) ?? `Update draw user-wise paid failed with status ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  return {
+    success: data?.success ?? true,
+    message: data?.message,
+  };
+}
+
