@@ -1,21 +1,22 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  ActivityIndicator,
-  FlatList,
-  ListRenderItem,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    ListRenderItem,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchCommitteeList } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type { CommitteeItem } from "@/types/committee";
+import { logger } from "@/utils/logger";
 
 const CommitteeListScreen = (): React.JSX.Element => {
   const router = useRouter();
@@ -35,7 +36,7 @@ const CommitteeListScreen = (): React.JSX.Element => {
         const response = await fetchCommitteeList(token);
         setItems(response.data ?? []);
       } catch (err) {
-        console.error("Failed to load committees", err);
+        logger.error("Failed to load committees", err);
         setError(
           err instanceof Error
             ? err.message

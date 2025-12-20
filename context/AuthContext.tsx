@@ -1,10 +1,14 @@
+import * as SecureStore from "expo-secure-store";
 import React, {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+
+import { logger } from "@/utils/logger";
 
 export interface AuthUser {
   name?: string | null;
@@ -17,16 +21,18 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   token: string | null;
   user: AuthUser | null;
-  password: string | null;
   setAuth: (params: {
     token: string;
     user: AuthUser;
-    password?: string | null;
-  }) => void;
-  clearAuth: () => void;
+  }) => Promise<void>;
+  clearAuth: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
 
 export const AuthProvider = ({
   children,
@@ -35,18 +41,64 @@ export const AuthProvider = ({
 }): React.JSX.Element => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [password, setPassword] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const setAuth: AuthContextValue["setAuth"] = ({ token, user, password }) => {
-    setToken(token);
-    setUser(user);
-    setPassword(password ?? null);
+  // Load stored auth data on mount
+  useEffect(() => {
+    const loadStoredAuth = async () => {
+      try {
+        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+        const storedUser = await SecureStore.getItemAsync(USER_KEY);
+        
+        if (storedToken) {
+          setToken(storedToken);
+        }
+        
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+      } catch (error) {
+        // Handle secure store errors silently
+        logger.error("Failed to load stored auth:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadStoredAuth();
+  }, []);
+
+  const setAuth: AuthContextValue["setAuth"] = async ({ token, user }) => {
+    try {
+      // Store token securely
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      // Store user data securely
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      
+      setToken(token);
+      setUser(user);
+    } catch (error) {
+      logger.error("Failed to store auth:", error);
+      // Still set in memory as fallback
+      setToken(token);
+      setUser(user);
+    }
   };
 
-  const clearAuth = () => {
-    setToken(null);
-    setUser(null);
-    setPassword(null);
+  const clearAuth = async () => {
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
+    } catch (error) {
+      logger.error("Failed to clear stored auth:", error);
+    } finally {
+      setToken(null);
+      setUser(null);
+    }
   };
 
   const value = useMemo<AuthContextValue>(
@@ -54,11 +106,11 @@ export const AuthProvider = ({
       isAuthenticated: Boolean(token),
       token,
       user,
-      password,
       setAuth,
       clearAuth,
+      isLoading,
     }),
-    [token, user, password],
+    [token, user, isLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

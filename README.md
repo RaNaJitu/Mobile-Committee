@@ -1,50 +1,135 @@
-# Welcome to your Expo app 👋
+# Committee Management Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile application built with Expo for managing committee draws, members, and payments.
 
-## Get started
+## Features
 
-1. Install dependencies
+- 🔐 Secure authentication with token storage
+- 📊 Committee management and analysis
+- 🎲 Draw management with timer functionality
+- 💰 Payment tracking and management
+- 👥 Member management
+- 🎤 Voice announcements for draw timers
 
+## Prerequisites
+
+- Node.js 18+ or Bun
+- Expo CLI
+- Android Studio (for Android development) or Xcode (for iOS development)
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies:
    ```bash
+   bun install
+   # or
    npm install
    ```
 
-2. Start the app
-
+3. Set up environment variables:
    ```bash
-   npx expo start
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and set your API base URL:
+   ```
+   EXPO_PUBLIC_API_BASE_URL=https://your-api-url.com/api/v1
+   EXPO_PUBLIC_ENV=development
    ```
 
-In the output, you'll find options to open the app in a
+## Development
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+Start the development server:
 ```bash
-npm run reset-project
+bun run start
+# or
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+For Android:
+```bash
+bun run android
+```
 
-## Learn more
+For iOS:
+```bash
+bun run ios
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Production Build
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Android
+```bash
+bun run build:android
+```
 
-## Join the community
+### iOS
+```bash
+bun run build:ios
+```
 
-Join our community of developers creating universal apps.
+### Production Mode
+```bash
+bun run start:prod
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Environment Variables
+
+- `EXPO_PUBLIC_API_BASE_URL` - Your API base URL (required)
+- `EXPO_PUBLIC_ENV` - Environment: `development`, `staging`, or `production` (default: `development`)
+
+## Security Features
+
+- ✅ Secure token storage using expo-secure-store
+- ✅ No password storage in memory
+- ✅ Production-safe logging
+- ✅ Error boundaries for crash handling
+- ✅ Environment-based configuration
+
+## Project Structure
+
+```
+├── app/                 # Expo Router pages
+├── screens/            # Screen components
+├── components/         # Reusable components
+├── api/               # API functions
+├── context/           # React Context providers
+├── types/             # TypeScript type definitions
+├── utils/             # Utility functions
+├── theme/             # Theme and colors
+└── config/            # Configuration files
+```
+
+## Scripts
+
+- `start` - Start Expo development server
+- `start:dev` - Start with cleared cache
+- `start:prod` - Start in production mode
+- `android` - Start and open on Android
+- `ios` - Start and open on iOS
+- `build:android` - Build Android production app
+- `build:ios` - Build iOS production app
+- `lint` - Run ESLint
+- `type-check` - Run TypeScript type checking
+
+## Production Checklist
+
+Before deploying to production:
+
+- [x] Secure token storage implemented
+- [x] Password removed from memory
+- [x] Error boundaries added
+- [x] Console logs replaced with logger
+- [x] Environment variables configured
+- [x] Production build scripts added
+- [ ] Add analytics/crash reporting (optional)
+- [ ] Set up CI/CD pipeline
+- [ ] Configure app store metadata
+- [ ] Test on physical devices
+- [ ] Performance optimization
+- [ ] Security audit
+
+## License
+
+Private - All rights reserved

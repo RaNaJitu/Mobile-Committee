@@ -32,7 +32,6 @@ interface LoginPayload {
 interface LogoutPayload {
   phoneNo: string;
   email?: string;
-  password?: string;
 }
 
 export async function registerUser(

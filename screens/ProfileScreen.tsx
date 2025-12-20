@@ -1,26 +1,27 @@
-import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { logoutUser } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
+import { logger } from "@/utils/logger";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useState } from "react";
+import {
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProfileScreen = (): React.JSX.Element => {
   const router = useRouter();
-  const { user, token, password, clearAuth } = useAuth();
+  const { user, token, clearAuth } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     if (!token || !user?.phoneNo) {
-      clearAuth();
+      await clearAuth();
       router.replace("/");
       return;
     }
@@ -30,14 +31,13 @@ const ProfileScreen = (): React.JSX.Element => {
       await logoutUser(token, {
         phoneNo: user.phoneNo,
         email: user.email ?? undefined,
-        password: password ?? undefined,
       });
 
-      clearAuth();
+      await clearAuth();
       Alert.alert("Logged out", "You have been logged out successfully.");
       router.replace("/");
     } catch (error) {
-      console.error("Logout failed", error);
+      logger.error("Logout failed", error);
       Alert.alert(
         "Logout failed",
         error instanceof Error

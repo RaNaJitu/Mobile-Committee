@@ -1,26 +1,27 @@
+import { loginUser, registerUser } from "@/api/auth";
+import { useAuth } from "@/context/AuthContext";
+import { colors } from "@/theme/colors";
+import type {
+    LoginFormValues,
+    SignupFormValues,
+    UserRole,
+} from "@/types/auth";
+import { logger } from "@/utils/logger";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { loginUser, registerUser } from "@/api/auth";
-import { useAuth } from "@/context/AuthContext";
-import { colors } from "@/theme/colors";
-import type {
-  LoginFormValues,
-  SignupFormValues,
-  UserRole,
-} from "@/types/auth";
 
 const extractToken = (response: any): string | null => {
   const candidates = [
@@ -79,7 +80,7 @@ const LoginScreen = (): React.JSX.Element => {
     try {
       setIsSigningIn(true);
       const response = await loginUser(payload);
-      console.log("Login success", response);
+      logger.log("Login success");
 
       // Try to extract token and user info from the response,
       // but fall back to the form values if needed.
@@ -92,7 +93,7 @@ const LoginScreen = (): React.JSX.Element => {
         anyResponse?.user ??
         anyResponse?.data;
 
-      setAuth({
+      await setAuth({
         token: token ?? "",
         user: {
           name: responseUser?.name ?? null,
@@ -100,13 +101,12 @@ const LoginScreen = (): React.JSX.Element => {
           phoneNo: responseUser?.phoneNo ?? payload.phoneNumber ?? null,
           role: responseUser?.role ?? null,
         },
-        password: payload.password,
       });
 
       Alert.alert("Success", "Logged in successfully.");
       router.replace("/(tabs)/committee");
     } catch (error) {
-      console.error("Login failed", error);
+      logger.error("Login failed", error);
       Alert.alert(
         "Login failed",
         error instanceof Error
@@ -130,7 +130,7 @@ const LoginScreen = (): React.JSX.Element => {
     try {
       setIsSigningUp(true);
       const response = await registerUser(payload);
-      console.log("Sign up success", response);
+      logger.log("Sign up success");
 
       const anyResponse = response as any;
       const token = extractToken(anyResponse);
@@ -141,7 +141,7 @@ const LoginScreen = (): React.JSX.Element => {
         anyResponse?.user ??
         anyResponse?.data;
 
-      setAuth({
+      await setAuth({
         token: token ?? "",
         user: {
           name: responseUser?.name ?? payload.fullName,
@@ -149,13 +149,12 @@ const LoginScreen = (): React.JSX.Element => {
           phoneNo: responseUser?.phoneNo ?? payload.phoneNumber,
           role: responseUser?.role ?? payload.role,
         },
-        password: payload.password,
       });
 
       Alert.alert("Success", "Account created successfully.");
       router.replace("/(tabs)/committee");
     } catch (error) {
-      console.error("Sign up failed", error);
+      logger.error("Sign up failed", error);
       Alert.alert(
         "Sign up failed",
         error instanceof Error

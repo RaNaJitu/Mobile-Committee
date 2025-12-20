@@ -2,13 +2,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  ListRenderItem,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    ListRenderItem,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,6 +16,7 @@ import { fetchDrawUserWisePaid, updateDrawUserWisePaid } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type { DrawUserWisePaidItem } from "@/types/committee";
+import { logger } from "@/utils/logger";
 
 const DrawUserWisePaidScreen = (): React.JSX.Element => {
   const { token } = useAuth();
@@ -45,7 +46,7 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       const response = await fetchDrawUserWisePaid(token, committeeId, drawId);
       setItems(response.data ?? []);
     } catch (err) {
-      console.error("Failed to load draw user-wise paid", err);
+      logger.error("Failed to load draw user-wise paid", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to load draw user-wise paid data.";
       
       // Handle specific error cases
@@ -86,7 +87,7 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       // Reload the data to show updated values
       await loadData();
     } catch (err) {
-      console.error("Failed to update payment", err);
+      logger.error("Failed to update payment", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to update payment.";
       setError(errorMessage);
     } finally {

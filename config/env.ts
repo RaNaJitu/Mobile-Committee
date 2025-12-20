@@ -1,6 +1,15 @@
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://10.255.253.32:4000/api/v1";
 
-export { API_BASE_URL };
+const ENV = (process.env.EXPO_PUBLIC_ENV ?? "DEVELOPMENT") as
+  | "DEVELOPMENT"
+  | "STAGING"
+  | "PRODUCTION";
+
+const IS_PRODUCTION = ENV === "PRODUCTION";
+const IS_DEVELOPMENT = ENV === "DEVELOPMENT";
+const IS_STAGING = ENV === "STAGING";
+
+export { API_BASE_URL, ENV, IS_DEVELOPMENT, IS_PRODUCTION, IS_STAGING };
 
 

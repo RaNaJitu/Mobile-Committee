@@ -3,30 +3,31 @@ import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  ListRenderItem,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    ListRenderItem,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  fetchCommitteeAnalysis,
-  fetchCommitteeDraws,
-  fetchCommitteeMembers,
+    fetchCommitteeAnalysis,
+    fetchCommitteeDraws,
+    fetchCommitteeMembers,
 } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type {
-  CommitteeAnalysisItem,
-  CommitteeDrawItem,
-  CommitteeMemberItem,
+    CommitteeAnalysisItem,
+    CommitteeDrawItem,
+    CommitteeMemberItem,
 } from "@/types/committee";
+import { logger } from "@/utils/logger";
 
 type DetailTab = "members" | "analysis" | "draws";
 
@@ -111,7 +112,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
           femaleVoiceRef.current = possibleFemaleVoice.identifier;
         }
       } catch (error) {
-        console.error("Error getting voices:", error);
+        logger.error("Error getting voices:", error);
       }
     };
     
@@ -132,7 +133,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         // console.log("==LOG== ~ loadMembers ~ response:", response)
         setMembers(response.data ?? []);
       } catch (err) {
-        console.error("Failed to load committee members", err);
+        logger.error("Failed to load committee members", err);
         setMembersError(
           err instanceof Error
             ? err.message
@@ -164,7 +165,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setAnalysis(response.data);
         setAnalysisLoadedOnce(true);
       } catch (err) {
-        console.error("Failed to load committee analysis", err);
+        logger.error("Failed to load committee analysis", err);
         setAnalysisError(
           err instanceof Error
             ? err.message
@@ -196,7 +197,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setDraws(response.data ?? []);
         setDrawsLoadedOnce(true);
       } catch (err) {
-        console.error("Failed to load committee draws", err);
+        logger.error("Failed to load committee draws", err);
         setDrawsError(
           err instanceof Error
             ? err.message
@@ -604,7 +605,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       const isDrawNotStarted = !Number.isNaN(drawDateOnly.getTime()) && drawDateOnly > today;
 
       const handleDrawPress = () => {
-        console.log("Draw card pressed:", { committeeId, drawId: item.id });
+        logger.log("Draw card pressed:", { committeeId, drawId: item.id });
         router.push(
           `/committee/${committeeId}/draw/${item.id}` as any,
         );
