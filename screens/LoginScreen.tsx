@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import {
   Alert,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import { loginUser, registerUser } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";

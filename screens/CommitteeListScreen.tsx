@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   FlatList,
   ListRenderItem,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,

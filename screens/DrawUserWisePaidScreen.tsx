@@ -5,12 +5,12 @@ import {
   ActivityIndicator,
   FlatList,
   ListRenderItem,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchDrawUserWisePaid } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
@@ -44,14 +44,18 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
         setError(null);
         const response = await fetchDrawUserWisePaid(token, committeeId, drawId);
         setItems(response.data ?? []);
-      } catch (err) {
-        console.error("Failed to load draw user-wise paid", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load draw user-wise paid data.",
-        );
-      } finally {
+      // Update the error handling section (lines 47-53):
+    } catch (err) {
+      console.error("Failed to load draw user-wise paid", err);
+      const errorMessage = err instanceof Error ? err.message : "Unable to load draw user-wise paid data.";
+      
+      // Handle specific error cases
+      if (errorMessage.toLowerCase().includes("not started")) {
+        setError("This draw has not been started yet. Payment records will be available once the draw begins.");
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
         setLoading(false);
       }
     };
@@ -65,9 +69,9 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
 
   const renderItem: ListRenderItem<DrawUserWisePaidItem> = ({ item }) => {
     const user = item.user;
-    const formattedDrawAmount = user.userDrawAmountPaid.toLocaleString();
-    const formattedFineAmount = user.fineAmountPaid.toLocaleString();
-
+    const formattedDrawAmount = Number(user.userDrawAmountPaid);
+    const formattedFineAmount = Number(user.fineAmountPaid);
+    const formattedTotalAmount = Number(Number(user.userDrawAmountPaid) + Number(user.fineAmountPaid)) ?? 0
     return (
       <View style={styles.card}>
         <View style={styles.avatar}>
@@ -82,14 +86,35 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
           </Text>
           <View style={styles.amountRow}>
             <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Draw amount paid:</Text>
+              <Text style={styles.amountLabel}>Draw Amount Paid:</Text>
               <Text style={styles.amountValue}>₹{formattedDrawAmount}</Text>
             </View>
             <View style={styles.amountItem}>
-              <Text style={styles.amountLabel}>Fine amount paid:</Text>
+              <Text style={styles.amountLabel}>Fine Amount Paid:</Text>
               <Text style={styles.amountValue}>₹{formattedFineAmount}</Text>
             </View>
+            <View style={styles.amountItem}>
+              <Text style={styles.amountLabel}>Total Amount Paid:</Text>
+              <Text style={styles.amountValue}>₹{formattedTotalAmount}</Text>
+            </View>
+            <View
+              style={[
+                styles.timerPill,
+              ]}
+            >
+                <Text
+                  style={[
+                    styles.statusText,
+                    {color: "#FFD700"},
+                  ]}
+                >
+                  {"Make Paid"}
+                </Text>
+            </View>
           </View>
+        </View>
+        <View >
+
         </View>
       </View>
     );
@@ -99,9 +124,9 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} hitSlop={10}>
+        {/* <TouchableOpacity onPress={handleBack} hitSlop={10}>
           <Text style={styles.backText}>◀ Back</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <Text style={styles.headerTitle}>Draw #{drawId} - Payments</Text>
         <View style={{ width: 48 }} />
       </View>
@@ -123,7 +148,7 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
         {!loading && !error && (
           <FlatList
             data={items}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item, index) => `${item.id}-${item.userId}-${index}`}
             renderItem={renderItem}
             contentContainerStyle={
               items.length === 0 ? styles.emptyContainer : styles.listContent
@@ -252,6 +277,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  timerPill: {
+    borderColor: "#FFD700",
+    backgroundColor: "rgba(224, 203, 15, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginLeft: "auto",
+    alignSelf: "flex-start",
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
 

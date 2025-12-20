@@ -3,13 +3,12 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import { logoutUser } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";

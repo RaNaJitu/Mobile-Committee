@@ -5,13 +5,13 @@ import {
   ActivityIndicator,
   FlatList,
   ListRenderItem,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   fetchCommitteeAnalysis,
@@ -383,15 +383,25 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
             <View style={styles.drawDetailRow}>
               <Text style={styles.drawLabel}>Draw amount:</Text>
               {/* <Text style={styles.drawValue}>₹{formattedDrawAmount}</Text> */}
-              <Text style={styles.drawValue}>₹{formattedDrawAmount}</Text>
+              <Text style={styles.drawValue}>₹ {formattedDrawAmount}</Text>
             </View>
-            {/* <View style={styles.drawDetailRow}>
-              <Text style={styles.drawLabel}>Paid amount:</Text>
-              <Text style={styles.drawValue}>₹{formattedPaidAmount}</Text>
-            </View> */}
             <View style={styles.drawDetailRow}>
               <Text style={styles.drawLabel}>Max amount:</Text>
-              <Text style={styles.drawValue}>₹{formattedMinAmount}</Text>
+              <Text style={styles.drawValue}>₹ {formattedMinAmount}</Text>
+              <View
+              style={[
+                styles.timerPill,
+              ]}
+            >
+                <Text
+                  style={[
+                    styles.statusText,
+                    {color: "#FFD700"},
+                  ]}
+                >
+                  {"Timer"}
+                </Text>
+            </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -774,11 +784,12 @@ const styles = StyleSheet.create({
   },
   drawDetailRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
   },
   drawLabel: {
     fontSize: 13,
+    marginRight: 10,
     color: colors.textSecondary,
   },
   drawValue: {
@@ -786,6 +797,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.textPrimary,
   },
+  timerPill: {
+      borderColor: "#FFD700",
+      backgroundColor: "rgba(224, 203, 15, 0.12)",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      marginLeft: "auto",
+      alignSelf: "flex-start",
+    },
 });
 
 export default CommitteeAnalysisScreen;
