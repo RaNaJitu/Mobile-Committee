@@ -34,7 +34,7 @@ const ProfileScreen = (): React.JSX.Element => {
       });
 
       await clearAuth();
-      Alert.alert("Logged out", "You have been logged out successfully.");
+      // Alert.alert("Logged out", "You have been logged out successfully.");
       router.replace("/");
     } catch (error) {
       logger.error("Logout failed", error);

@@ -1,15 +1,11 @@
 import type { LoginFormValues, SignupFormValues } from "@/types/auth";
 
-import { API_BASE_URL } from "@/config/env";
+import { apiClient } from "@/utils/apiClient";
 
-const BASE_URL = API_BASE_URL;
 const REGISTER_PATH = "/auth/register";
 const LOGIN_PATH = "/auth/login";
 const LOGOUT_PATH = "/auth/logout";
 
-// TODO: Put your real JWT token here if the API requires Authorization
-// for registration, or inject it from secure storage/auth state.
-const AUTH_TOKEN = "";
 
 interface RegisterPayload {
   phoneNo: string;
@@ -45,35 +41,9 @@ export async function registerUser(
     role: form.role,
   };
 
-  const headers: Record<string, string> = {
-    Accept: "application/json, text/plain, */*",
-    "Content-Type": "application/json",
-  };
-
-  if (AUTH_TOKEN) {
-    headers.Authorization = `Bearer ${AUTH_TOKEN}`;
-  }
-
-  const response = await fetch(`${BASE_URL}${REGISTER_PATH}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response
-    .json()
-    .catch(() => null) as RegisterResponse | { message?: string; error?: string };
-
-  if (!response.ok) {
-    const message =
-      (data && typeof data === "object" && ("message" in data || "error" in data)
-        ? (data as any).message ?? (data as any).error
-        : undefined) ?? `Register failed with status ${response.status}`;
-
-    throw new Error(message);
-  }
-
-  return data as RegisterResponse;
+  // Note: Registration doesn't require a token, so we don't pass one
+  // If your API requires a token for registration, pass it here
+  return apiClient.post<RegisterResponse>(REGISTER_PATH, payload);
 }
 
 export async function loginUser(
@@ -87,57 +57,15 @@ export async function loginUser(
     password: form.password,
   };
 
-  const response = await fetch(`${BASE_URL}${LOGIN_PATH}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response
-    .json()
-    .catch(() => null) as LoginResponse | { message?: string; error?: string };
-
-  if (!response.ok) {
-    const message =
-      (data && typeof data === "object" && ("message" in data || "error" in data)
-        ? (data as any).message ?? (data as any).error
-        : undefined) ?? `Login failed with status ${response.status}`;
-
-    throw new Error(message);
-  }
-
-  return data as LoginResponse;
+  // Login doesn't require a token
+  return apiClient.post<LoginResponse>(LOGIN_PATH, payload);
 }
 
 export async function logoutUser(
   token: string,
   payload: LogoutPayload,
 ): Promise<LogoutResponse> {
-  const response = await fetch(`${BASE_URL}${LOGOUT_PATH}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response
-    .json()
-    .catch(() => null) as LogoutResponse | { message?: string; error?: string };
-
-  if (!response.ok) {
-    const message =
-      (data && typeof data === "object" && ("message" in data || "error" in data)
-        ? (data as any).message ?? (data as any).error
-        : undefined) ?? `Logout failed with status ${response.status}`;
-
-    throw new Error(message);
-  }
-
-  return data as LogoutResponse;
+  return apiClient.post<LogoutResponse>(LOGOUT_PATH, payload, token);
 }
 
 

@@ -20,18 +20,26 @@ import { logger } from "@/utils/logger";
 
 const CommitteeListScreen = (): React.JSX.Element => {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
   const [items, setItems] = useState<CommitteeItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Wait for auth to finish loading before attempting to fetch data
+    if (authLoading) {
+      return;
+    }
+
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
         if (!token) {
-          throw new Error("Missing auth token. Please log in again.");
+          // If no token after auth has loaded, redirect to login
+          logger.log("No token found, redirecting to login");
+          router.replace("/");
+          return;
         }
         const response = await fetchCommitteeList(token);
         setItems(response.data ?? []);
@@ -48,7 +56,7 @@ const CommitteeListScreen = (): React.JSX.Element => {
     };
 
     void load();
-  }, [token]);
+  }, [token, authLoading, router]);
 
   const renderItem: ListRenderItem<CommitteeItem> = ({ item }) => {
     const isActive = item.committeeStatus === 1;
@@ -115,10 +123,12 @@ const CommitteeListScreen = (): React.JSX.Element => {
       <View style={styles.container}>
         <Text style={styles.screenTitle}>Committees</Text>
 
-        {loading && (
+        {(authLoading || loading) && (
           <View style={styles.center}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading committees...</Text>
+            <Text style={styles.loadingText}>
+              {authLoading ? "Loading..." : "Loading committees..."}
+            </Text>
           </View>
         )}
 

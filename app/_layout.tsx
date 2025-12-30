@@ -7,9 +7,9 @@ import { AuthProvider } from "@/context/AuthContext";
 export default function RootLayout(): React.JSX.Element {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Stack />
-      </AuthProvider>
+    <AuthProvider>
+      <Stack />
+    </AuthProvider>
     </ErrorBoundary>
   );
 }

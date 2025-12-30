@@ -2,9 +2,9 @@ import { loginUser, registerUser } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type {
-    LoginFormValues,
-    SignupFormValues,
-    UserRole,
+  LoginFormValues,
+  SignupFormValues,
+  UserRole,
 } from "@/types/auth";
 import { logger } from "@/utils/logger";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,14 +12,14 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -103,7 +103,6 @@ const LoginScreen = (): React.JSX.Element => {
         },
       });
 
-      Alert.alert("Success", "Logged in successfully.");
       router.replace("/(tabs)/committee");
     } catch (error) {
       logger.error("Login failed", error);
@@ -151,7 +150,6 @@ const LoginScreen = (): React.JSX.Element => {
         },
       });
 
-      Alert.alert("Success", "Account created successfully.");
       router.replace("/(tabs)/committee");
     } catch (error) {
       logger.error("Sign up failed", error);

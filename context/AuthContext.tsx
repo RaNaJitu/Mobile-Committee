@@ -1,6 +1,8 @@
 import * as SecureStore from "expo-secure-store";
+import { useRouter } from "expo-router";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -8,6 +10,7 @@ import React, {
   type ReactNode,
 } from "react";
 
+import { apiClient } from "@/utils/apiClient";
 import { logger } from "@/utils/logger";
 
 export interface AuthUser {
@@ -39,6 +42,7 @@ export const AuthProvider = ({
 }: {
   children: ReactNode;
 }): React.JSX.Element => {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +76,30 @@ export const AuthProvider = ({
     void loadStoredAuth();
   }, []);
 
+  const clearAuth = useCallback(async () => {
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
+    } catch (error) {
+      logger.error("Failed to clear stored auth:", error);
+    } finally {
+      setToken(null);
+      setUser(null);
+    }
+  }, []);
+
+  // Register session expiration handler with API client
+  useEffect(() => {
+    const handleSessionExpired = async () => {
+      logger.log("Session expired, clearing auth and redirecting to login");
+      await clearAuth();
+      // Use replace to prevent back navigation
+      router.replace("/");
+    };
+
+    apiClient.setSessionExpiredHandler(handleSessionExpired);
+  }, [router, clearAuth]);
+
   const setAuth: AuthContextValue["setAuth"] = async ({ token, user }) => {
     try {
       // Store token securely
@@ -86,18 +114,6 @@ export const AuthProvider = ({
       // Still set in memory as fallback
       setToken(token);
       setUser(user);
-    }
-  };
-
-  const clearAuth = async () => {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync(USER_KEY);
-    } catch (error) {
-      logger.error("Failed to clear stored auth:", error);
-    } finally {
-      setToken(null);
-      setUser(null);
     }
   };
 

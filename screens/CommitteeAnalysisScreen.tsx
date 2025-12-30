@@ -45,7 +45,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
 
   const committeeId = Number(params.id);
 
-  const [activeTab, setActiveTab] = useState<DetailTab>("draws");
+  const [activeTab, setActiveTab] = useState<DetailTab>("members");
 
   const [members, setMembers] = useState<CommitteeMemberItem[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -731,22 +731,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         </View>
 
         <View style={styles.tabBar}>
-        <TouchableOpacity
-            style={[
-              styles.tabItem,
-              activeTab === "draws" && styles.tabItemActive,
-            ]}
-            onPress={() => setActiveTab("draws")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "draws" && styles.tabTextActive,
-              ]}
-            >
-              Committee Draw
-            </Text>
-          </TouchableOpacity>
+        
           
           <TouchableOpacity
             style={[
@@ -763,6 +748,22 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
               onPress={() => setActiveTab("members")}
             >
               Members
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabItem,
+              activeTab === "draws" && styles.tabItemActive,
+            ]}
+            onPress={() => setActiveTab("draws")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "draws" && styles.tabTextActive,
+              ]}
+            >
+              Committee Draw
             </Text>
           </TouchableOpacity>
           
