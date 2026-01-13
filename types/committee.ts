@@ -9,6 +9,7 @@ export interface CommitteeItem {
   fineAmount: number;
   extraDaysForFine: number;
   startCommitteeDate: string;
+  committeeType?: string; // Optional field for committee type
 }
 
 export interface CommitteeListResponse {
@@ -37,6 +38,7 @@ export interface CommitteeAnalysisItem {
   fineAmount: number;
   extraDaysForFine: number;
   startCommitteeDate: string;
+  committeeType?: string; // Committee type (LOTTERY or NORMAL)
   analysis: CommitteeAnalysisMetrics;
 }
 
@@ -51,6 +53,7 @@ export interface CommitteeMemberUser {
   name?: string | null;
   email?: string | null;
   phoneNo?: string | null;
+  isUserDrawCompleted?: boolean; // Indicates if user draw is completed
 }
 
 export interface CommitteeMemberItem {
@@ -62,6 +65,7 @@ export interface CommitteeMemberItem {
   phoneNo?: string | null;
   phoneNumber?: string | null;
   user?: CommitteeMemberUser;
+  isUserDrawCompleted?: boolean; // Indicates if user draw is completed
 }
 
 export interface CommitteeMemberListResponse {
@@ -79,6 +83,7 @@ export interface CommitteeDrawItem {
   committeeDrawMinAmount: number;
   committeeDrawDate: string;
   committeeDrawTime: string;
+  isDrawCompleted?: boolean; // Indicates if draw is completed
 }
 
 export interface CommitteeDrawListResponse {

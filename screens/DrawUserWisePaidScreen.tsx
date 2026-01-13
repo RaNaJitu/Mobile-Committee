@@ -16,6 +16,7 @@ import { fetchDrawUserWisePaid, updateDrawUserWisePaid } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type { DrawUserWisePaidItem } from "@/types/committee";
+import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
 
 const DrawUserWisePaidScreen = (): React.JSX.Element => {
@@ -46,6 +47,11 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       const response = await fetchDrawUserWisePaid(token, committeeId, drawId);
       setItems(response.data ?? []);
     } catch (err) {
+      // Don't show error if session expired (redirect is already happening)
+      if (isSessionExpiredError(err)) {
+        return;
+      }
+      
       logger.error("Failed to load draw user-wise paid", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to load draw user-wise paid data.";
       
@@ -87,6 +93,11 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       // Reload the data to show updated values
       await loadData();
     } catch (err) {
+      // Don't show error if session expired (redirect is already happening)
+      if (isSessionExpiredError(err)) {
+        return;
+      }
+      
       logger.error("Failed to update payment", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to update payment.";
       setError(errorMessage);

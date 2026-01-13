@@ -3,33 +3,39 @@ import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    ListRenderItem,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  ListRenderItem,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    fetchCommitteeAnalysis,
-    fetchCommitteeDraws,
-    fetchCommitteeMembers,
+  fetchCommitteeAnalysis,
+  fetchCommitteeDraws,
+  fetchCommitteeMembers,
 } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type {
-    CommitteeAnalysisItem,
-    CommitteeDrawItem,
-    CommitteeMemberItem,
+  CommitteeAnalysisItem,
+  CommitteeDrawItem,
+  CommitteeMemberItem,
 } from "@/types/committee";
+import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
 
 type DetailTab = "members" | "analysis" | "draws";
+
+// Get screen width for responsive font sizing
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const IS_SMALL_SCREEN = SCREEN_WIDTH <= 375; // iPhone 12 mini and smaller
 
 const CommitteeAnalysisScreen = (): React.JSX.Element => {
   const { token } = useAuth();
@@ -41,6 +47,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
     maxMembers?: string;
     status?: string;
     startDate?: string;
+    committeeType?: string;
   }>();
 
   const committeeId = Number(params.id);
@@ -133,6 +140,11 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         // console.log("==LOG== ~ loadMembers ~ response:", response)
         setMembers(response.data ?? []);
       } catch (err) {
+        // Don't show error if session expired (redirect is already happening)
+        if (isSessionExpiredError(err)) {
+          return;
+        }
+        
         logger.error("Failed to load committee members", err);
         setMembersError(
           err instanceof Error
@@ -165,6 +177,11 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setAnalysis(response.data);
         setAnalysisLoadedOnce(true);
       } catch (err) {
+        // Don't show error if session expired (redirect is already happening)
+        if (isSessionExpiredError(err)) {
+          return;
+        }
+        
         logger.error("Failed to load committee analysis", err);
         setAnalysisError(
           err instanceof Error
@@ -197,6 +214,11 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setDraws(response.data ?? []);
         setDrawsLoadedOnce(true);
       } catch (err) {
+        // Don't show error if session expired (redirect is already happening)
+        if (isSessionExpiredError(err)) {
+          return;
+        }
+        
         logger.error("Failed to load committee draws", err);
         setDrawsError(
           err instanceof Error
@@ -407,6 +429,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       ? Number(params.status)
       : analysis?.committeeStatus;
   const baseStartDateString = params.startDate ?? analysis?.startCommitteeDate;
+  const baseCommitteeType = params.committeeType || "----------"; // Get committee type from params or analysis
 
   const isActive = baseStatus === 1;
   const formattedAmount =
@@ -414,6 +437,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
   const startDate = baseStartDateString
     ? new Date(baseStartDateString)
     : null;
+
   const startDateLabel =
     startDate && !Number.isNaN(startDate.getTime())
       ? startDate.toLocaleDateString()
@@ -444,18 +468,18 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         </View>
       );
     }
-
+    // Members section
     const renderMember: ListRenderItem<CommitteeMemberItem> = ({ item }) => {
-      // console.log("==LOG== ~ renderMember ~ item:", item.user)
-      const displayName =
-        item.user?.name ?? item.name ?? item.memberName ?? item.userName ?? "Member";
+      
+      const displayName = item.user?.name  ?? "Member";
       const email = item.user?.email ?? item.email ?? "";
-      const phone =
-        item.user?.phoneNo ?? item.phoneNo ?? item.phoneNumber ?? "";
+      const phone = item.user?.phoneNo ?? "";
+      const isDrawCompleted = item.user?.isUserDrawCompleted;
 
       const secondary =
         // email && phone ? `${email} • ${phone}` : email || phone || "";
         email && phone ? `• ${email}` : email || phone || "";
+
 
       return (
         <View style={styles.memberCard}>
@@ -472,6 +496,13 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
               <Text style={styles.memberSecondary}>{secondary}</Text>
             ) : null}
           </View>
+          {/* Draw completion status indicator */}
+          <View
+            style={[
+              styles.drawStatusIndicator,
+              isDrawCompleted ? styles.drawStatusCompleted : styles.drawStatusPending,
+            ]}
+          />
         </View>
       );
     };
@@ -485,7 +516,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       />
     );
   };
-
+ // Analysis section
   const renderAnalysis = () => {
     if (analysisLoading && !analysisLoadedOnce) {
       return (
@@ -557,6 +588,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
     );
   };
 
+  // Draws section
   const renderDraws = () => {
     if (drawsLoading && !drawsLoadedOnce) {
       return (
@@ -597,12 +629,17 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       const formattedPaidAmount = item.committeeDrawPaidAmount.toLocaleString();
       const formattedMinAmount = item.committeeDrawMinAmount.toLocaleString();
 
-      // Check if draw date is in the future (draw not started yet)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
-      const drawDateOnly = new Date(drawDate);
-      drawDateOnly.setHours(0, 0, 0, 0);
-      const isDrawNotStarted = !Number.isNaN(drawDateOnly.getTime()) && drawDateOnly > today;
+      // Check if draw date/time is in the future (draw not started yet)
+      const now = new Date();
+      const isDrawNotStarted = drawDate > now;
+
+      
+      // Check if draw is completed
+      const isDrawCompleted = item.isDrawCompleted;
+      
+      // Get committee type (default to NORMAL if not specified)
+      const committeeType = baseCommitteeType?.toUpperCase() || "NORMAL";
+      const isLottery = committeeType === "LOTTERY";
 
       const handleDrawPress = () => {
         logger.log("Draw card pressed:", { committeeId, drawId: item.id });
@@ -646,20 +683,28 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={styles.timerPill}
+                  style={[
+                    styles.timerPill,
+                    isDrawCompleted && styles.timerPillDisabled,
+                  ]}
                   onPress={(e) => {
                     e.stopPropagation();
-                    handleTimerPress(item);
+                    if (!isDrawCompleted) {
+                      handleTimerPress(item);
+                    }
                   }}
-                  activeOpacity={0.7}
+                  activeOpacity={isDrawCompleted ? 1 : 0.7}
+                  disabled={isDrawCompleted}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      {color: "#FFD700"},
+                      {
+                        color: isDrawCompleted ? colors.textSecondary : "#FFD700",
+                      },
                     ]}
                   >
-                    {"Timer"}
+                    {isLottery ? "Start Lottery" : "Timer"}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -711,6 +756,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
               <Text style={styles.subtitle}>Amount: {formattedAmount}</Text>
               <Text style={styles.subtitle}>Max Members: {baseMaxMembers}</Text>
               <Text style={styles.subtitle}>Start: {startDateLabel}</Text>
+              <Text style={styles.subtitle}>Committee Type: {baseCommitteeType}</Text>
             </View>
             <View
               style={[
@@ -745,6 +791,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
                 styles.tabText,
                 activeTab === "members" && styles.tabTextActive,
               ]}
+              numberOfLines={1}
               onPress={() => setActiveTab("members")}
             >
               Members
@@ -762,8 +809,9 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
                 styles.tabText,
                 activeTab === "draws" && styles.tabTextActive,
               ]}
+              numberOfLines={1}
             >
-              Committee Draw
+              Committee Draw  
             </Text>
           </TouchableOpacity>
           
@@ -779,6 +827,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
                 styles.tabText,
                 activeTab === "analysis" && styles.tabTextActive,
               ]}
+              numberOfLines={1}
             >
               Analysis
             </Text>
@@ -1035,9 +1084,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: IS_SMALL_SCREEN ? 12 : 14, // Smaller font for small screens like iPhone 12 mini
     fontWeight: "600",
     color: colors.textSecondary,
+    flexShrink: 0, // Prevents text from shrinking/wrapping
   },
   tabTextActive: {
     color: "#1B1235",
@@ -1079,6 +1129,18 @@ const styles = StyleSheet.create({
   memberSecondary: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  drawStatusIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  drawStatusCompleted: {
+    backgroundColor: "#22c55e", // Green for completed
+  },
+  drawStatusPending: {
+    backgroundColor: "#ef4444", // Red for pending/not completed
   },
   emptyText: {
     fontSize: 14,
@@ -1141,6 +1203,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginLeft: "auto",
     alignSelf: "flex-start",
+  },
+  timerPillDisabled: {
+    opacity: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBackground,
   },
   drawNotStartedPill: {
     borderColor: colors.border,

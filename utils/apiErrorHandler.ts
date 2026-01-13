@@ -9,8 +9,18 @@ export class SessionExpiredError extends Error {
   constructor(message = "Session expired") {
     super(message);
     this.name = "SessionExpiredError";
+    // Ensure instanceof works correctly
+    Object.setPrototypeOf(this, SessionExpiredError.prototype);
   }
 }
+
+/**
+ * Check if an error is a SessionExpiredError
+ */
+export const isSessionExpiredError = (error: unknown): error is SessionExpiredError => {
+  return error instanceof SessionExpiredError || 
+         (error instanceof Error && error.name === "SessionExpiredError");
+};
 
 export interface ApiErrorResponse {
   message?: string;

@@ -2,13 +2,13 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    ListRenderItem,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  ListRenderItem,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,6 +16,7 @@ import { fetchCommitteeList } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type { CommitteeItem } from "@/types/committee";
+import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
 
 const CommitteeListScreen = (): React.JSX.Element => {
@@ -44,6 +45,11 @@ const CommitteeListScreen = (): React.JSX.Element => {
         const response = await fetchCommitteeList(token);
         setItems(response.data ?? []);
       } catch (err) {
+        // Don't show error if session expired (redirect is already happening)
+        if (isSessionExpiredError(err)) {
+          return;
+        }
+        
         logger.error("Failed to load committees", err);
         setError(
           err instanceof Error
@@ -80,6 +86,7 @@ const CommitteeListScreen = (): React.JSX.Element => {
               maxMembers: String(item.commissionMaxMember),
               status: String(item.committeeStatus),
               startDate: item.startCommitteeDate,
+              committeeType: item.committeeType || "---",
             },
           })
         }
@@ -90,8 +97,13 @@ const CommitteeListScreen = (): React.JSX.Element => {
           </Text>
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.title}>{item.committeeName}</Text>
+          <Text style={styles.title}>{item.committeeName} •
+          {item.committeeType && (
+              <Text style={styles.typeText}>{item.committeeType}  </Text>
+            )}
+          </Text>
           <Text style={styles.subtitle}>
+            
             Amount: ₹{formattedAmount} • Max members: {item.commissionMaxMember}
           </Text>
           <View style={styles.metaRow}>
@@ -215,6 +227,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginBottom: 6,
+  },
+  typeText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
   },
   metaRow: {
     flexDirection: "row",

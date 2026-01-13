@@ -94,7 +94,10 @@ export const AuthProvider = ({
       logger.log("Session expired, clearing auth and redirecting to login");
       await clearAuth();
       // Use replace to prevent back navigation
-      router.replace("/");
+      // Add a small delay to ensure state is cleared before navigation
+      setTimeout(() => {
+        router.replace("/");
+      }, 100);
     };
 
     apiClient.setSessionExpiredHandler(handleSessionExpired);
