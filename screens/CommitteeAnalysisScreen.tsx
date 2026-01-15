@@ -3,34 +3,36 @@ import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    ListRenderItem,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  ListRenderItem,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    fetchCommitteeAnalysis,
-    fetchCommitteeDraws,
-    fetchCommitteeMembers,
+  fetchCommitteeAnalysis,
+  fetchCommitteeDraws,
+  fetchCommitteeMembers,
+  updateDrawAmount,
 } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type {
-    CommitteeAnalysisItem,
-    CommitteeDrawItem,
-    CommitteeMemberItem,
+  CommitteeAnalysisItem,
+  CommitteeDrawItem,
+  CommitteeMemberItem,
 } from "@/types/committee";
 import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
-import { showErrorToast } from "@/utils/toast";
+import { showErrorToast, showSuccessToast } from "@/utils/toast";
 
 type DetailTab = "members" | "analysis" | "draws";
 
@@ -68,6 +70,10 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
   const [drawsLoading, setDrawsLoading] = useState(false);
   const [drawsError, setDrawsError] = useState<string | null>(null);
   const [drawsLoadedOnce, setDrawsLoadedOnce] = useState(false);
+  
+  // State for draw amount inputs
+  const [drawAmounts, setDrawAmounts] = useState<Record<number, string>>({});
+  const [updatingDrawId, setUpdatingDrawId] = useState<number | null>(null);
 
   // Timer modal state
   const [timerModalVisible, setTimerModalVisible] = useState(false);
@@ -81,6 +87,9 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
   const timerMinutesRef = useRef(1);
   const timerSecondsRef = useRef(0);
   const femaleVoiceRef = useRef<string | null>(null);
+  
+  // Ref to store debounce timeouts for draw amount updates
+  const drawAmountUpdateTimeouts = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   // Get available voices and select female voice
   useEffect(() => {
@@ -125,6 +134,17 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
     };
     
     void getFemaleVoice();
+  }, []);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all pending timeouts when component unmounts
+      Object.values(drawAmountUpdateTimeouts.current).forEach((timeout) => {
+        clearTimeout(timeout);
+      });
+      drawAmountUpdateTimeouts.current = {};
+    };
   }, []);
 
   useEffect(() => {
@@ -212,7 +232,14 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setDrawsLoading(true);
         setDrawsError(null);
         const response = await fetchCommitteeDraws(token, committeeId);
-        setDraws(response.data ?? []);
+        const drawsData = response.data ?? [];
+        setDraws(drawsData);
+        // Initialize draw amounts from API data
+        const initialAmounts: Record<number, string> = {};
+        drawsData.forEach((draw) => {
+          initialAmounts[draw.id] = draw.committeeDrawAmount.toString();
+        });
+        setDrawAmounts(initialAmounts);
         setDrawsLoadedOnce(true);
       } catch (err) {
         // Don't show error if session expired (redirect is already happening)
@@ -247,6 +274,85 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
     timerSecondsRef.current = 0;
     setIsTimerRunning(false);
     setTimerModalVisible(true);
+  };
+
+  const handleDrawAmountChange = (drawId: number, value: string) => {
+    // Only allow numbers and decimal point
+    const numericValue = value.replace(/[^0-9.]/g, "");
+    setDrawAmounts((prev) => ({
+      ...prev,
+      [drawId]: numericValue,
+    }));
+
+    // Clear existing timeout for this draw
+    if (drawAmountUpdateTimeouts.current[drawId]) {
+      clearTimeout(drawAmountUpdateTimeouts.current[drawId]);
+    }
+
+    // Get the original amount to compare
+    const originalDraw = draws.find((d) => d.id === drawId);
+    const originalAmount = originalDraw?.committeeDrawAmount.toString() || "";
+
+    // Set a new timeout to call API after 3 seconds of no typing
+    drawAmountUpdateTimeouts.current[drawId] = setTimeout(() => {
+      // Only call API if the value has changed
+      if (numericValue && numericValue !== originalAmount) {
+        handleDrawAmountUpdate(drawId, numericValue);
+      }
+      // Clean up the timeout reference
+      delete drawAmountUpdateTimeouts.current[drawId];
+    }, 3000);
+  };
+
+  const handleDrawAmountUpdate = async (drawId: number, amount: string) => {
+    if (!token || Number.isNaN(committeeId) || !amount || Number.isNaN(Number(amount))) {
+      return;
+    }
+
+    const numericAmount = Number(amount);
+    if (numericAmount <= 0) {
+      showErrorToast("Amount must be greater than 0");
+      return;
+    }
+
+    try {
+      setUpdatingDrawId(drawId);
+      const response = await updateDrawAmount(token, committeeId, drawId, numericAmount);
+      
+      if (response.message) {
+        showSuccessToast(response.message);
+      } else {
+        showSuccessToast("Draw amount updated successfully");
+      }
+      
+      // Reload draws to get updated data
+      const drawsResponse = await fetchCommitteeDraws(token, committeeId);
+      const drawsData = drawsResponse.data ?? [];
+      setDraws(drawsData);
+      // Update the amount in state
+      setDrawAmounts((prev) => ({
+        ...prev,
+        [drawId]: numericAmount.toString(),
+      }));
+    } catch (err) {
+      if (isSessionExpiredError(err)) {
+        return;
+      }
+      
+      logger.error("Failed to update draw amount", err);
+      const errorMessage = err instanceof Error ? err.message : "Unable to update draw amount.";
+      showErrorToast(errorMessage);
+      // Revert to original amount on error
+      const originalDraw = draws.find((d) => d.id === drawId);
+      if (originalDraw) {
+        setDrawAmounts((prev) => ({
+          ...prev,
+          [drawId]: originalDraw.committeeDrawAmount.toString(),
+        }));
+      }
+    } finally {
+      setUpdatingDrawId(null);
+    }
   };
 
   const handleStartTimer = () => {
@@ -665,12 +771,25 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
           <View style={styles.drawDetails}>
             <View style={styles.drawDetailRow}>
               <Text style={styles.drawLabel}>Draw amount:</Text>
-              {/* <Text style={styles.drawValue}>₹{formattedDrawAmount}</Text> */}
-              <Text style={styles.drawValue}>₹ {formattedDrawAmount}</Text>
+              <View style={styles.drawAmountInputContainer}>
+                <Text style={styles.drawAmountPrefix}>₹</Text>
+                <TextInput
+                  style={styles.drawAmountInput}
+                  value={drawAmounts[item.id] ?? formattedDrawAmount}
+                  onChangeText={(value) => handleDrawAmountChange(item.id, value)}
+                  keyboardType="numeric"
+                  editable={!updatingDrawId || updatingDrawId === item.id}
+                  placeholder={formattedDrawAmount}
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {updatingDrawId === item.id && (
+                  <ActivityIndicator size="small" color={colors.primary} style={styles.drawAmountLoader} />
+                )}
+              </View>
             </View>
             <View style={styles.drawDetailRow}>
-              <Text style={styles.drawLabel}>Max amount:</Text>
-              <Text style={styles.drawValue}>₹ {formattedMinAmount}</Text>
+              {/* <Text style={styles.drawLabel}>Max amount:</Text>
+              <Text style={styles.drawValue}>₹ {formattedMinAmount}</Text> */}
               {isDrawNotStarted ? (
                 <View style={styles.drawNotStartedPill}>
                   <Text
@@ -1194,6 +1313,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: colors.textPrimary,
+  },
+  drawAmountInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  drawAmountPrefix: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginRight: 4,
+  },
+  drawAmountInput: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    backgroundColor: colors.inputBackground || colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.textSecondary || "#e5e7eb",
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    minWidth: 80,
+    flex: 1,
+  },
+  drawAmountLoader: {
+    marginLeft: 8,
   },
   timerPill: {
     borderColor: "#FFD700",

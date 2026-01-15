@@ -1,9 +1,9 @@
 import type {
-  CommitteeAnalysisResponse,
-  CommitteeDrawListResponse,
-  CommitteeListResponse,
-  CommitteeMemberListResponse,
-  DrawUserWisePaidResponse,
+    CommitteeAnalysisResponse,
+    CommitteeDrawListResponse,
+    CommitteeListResponse,
+    CommitteeMemberListResponse,
+    DrawUserWisePaidResponse,
 } from "@/types/committee";
 
 import { apiClient } from "@/utils/apiClient";
@@ -85,3 +85,24 @@ export async function updateDrawUserWisePaid(
   };
 }
 
+export async function updateDrawAmount(
+  token: string,
+  committeeId: number,
+  drawId: number,
+  amount: number,
+): Promise<{ success: boolean; message?: string }> {
+  const response = await apiClient.patch<{ success?: boolean; message?: string }>(
+    "/draw/amount-update",
+    {
+      committeeId,
+      drawId,
+      amount,
+    },
+    token,
+  );
+
+  return {
+    success: response.success ?? true,
+    message: response.message,
+  };
+}
