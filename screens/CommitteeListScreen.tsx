@@ -18,6 +18,7 @@ import { colors } from "@/theme/colors";
 import type { CommitteeItem } from "@/types/committee";
 import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
+import { showErrorToast } from "@/utils/toast";
 
 const CommitteeListScreen = (): React.JSX.Element => {
   const router = useRouter();
@@ -51,11 +52,11 @@ const CommitteeListScreen = (): React.JSX.Element => {
         }
         
         logger.error("Failed to load committees", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load committee list.",
-        );
+        const errorMessage = err instanceof Error
+          ? err.message
+          : "Unable to load committee list.";
+        setError(errorMessage);
+        showErrorToast(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -71,6 +72,8 @@ const CommitteeListScreen = (): React.JSX.Element => {
     const startDateLabel = Number.isNaN(startDate.getTime())
       ? "-"
       : startDate.toLocaleDateString();
+    const committeeType = item.committeeType || "—";
+    const lotteryAmount = item.lotteryAmount || "—";
 
     return (
       <TouchableOpacity
@@ -86,7 +89,7 @@ const CommitteeListScreen = (): React.JSX.Element => {
               maxMembers: String(item.commissionMaxMember),
               status: String(item.committeeStatus),
               startDate: item.startCommitteeDate,
-              committeeType: item.committeeType || "---",
+              committeeType: item.committeeType,
             },
           })
         }
@@ -97,18 +100,9 @@ const CommitteeListScreen = (): React.JSX.Element => {
           </Text>
         </View>
         <View style={styles.cardContent}>
-          <Text style={styles.title}>{item.committeeName} •
-          {item.committeeType && (
-              <Text style={styles.typeText}>{item.committeeType}  </Text>
-            )}
-          </Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.title}>{item.committeeName}
             
-            Amount: ₹{formattedAmount} • Max members: {item.commissionMaxMember}
-          </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>Start: {startDateLabel}</Text>
-            <View
+          <View
               style={[
                 styles.statusPill,
                 isActive ? styles.statusActive : styles.statusInactive,
@@ -123,6 +117,26 @@ const CommitteeListScreen = (): React.JSX.Element => {
                 {isActive ? "Active" : "Inactive"}
               </Text>
             </View>
+            
+          </Text>
+          
+          <Text style={styles.subtitle}>
+            
+            Amount: ₹{formattedAmount} • Max members: {item.commissionMaxMember}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>
+              Start: {startDateLabel} • Lottery Amount: {lotteryAmount}
+            </Text>
+            
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>
+              Committee Type: {item.committeeType && (
+              <Text style={styles.typeText}>{item.committeeType}  </Text>
+            )}
+            </Text>
+            
           </View>
         </View>
       </TouchableOpacity>

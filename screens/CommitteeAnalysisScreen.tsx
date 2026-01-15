@@ -3,33 +3,34 @@ import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  ListRenderItem,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    ListRenderItem,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  fetchCommitteeAnalysis,
-  fetchCommitteeDraws,
-  fetchCommitteeMembers,
+    fetchCommitteeAnalysis,
+    fetchCommitteeDraws,
+    fetchCommitteeMembers,
 } from "@/api/committee";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import type {
-  CommitteeAnalysisItem,
-  CommitteeDrawItem,
-  CommitteeMemberItem,
+    CommitteeAnalysisItem,
+    CommitteeDrawItem,
+    CommitteeMemberItem,
 } from "@/types/committee";
 import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
+import { showErrorToast } from "@/utils/toast";
 
 type DetailTab = "members" | "analysis" | "draws";
 
@@ -183,11 +184,11 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         }
         
         logger.error("Failed to load committee analysis", err);
-        setAnalysisError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load committee analysis.",
-        );
+        const errorMessage = err instanceof Error
+          ? err.message
+          : "Unable to load committee analysis.";
+        setAnalysisError(errorMessage);
+        showErrorToast(errorMessage);
       } finally {
         setAnalysisLoading(false);
       }
@@ -220,11 +221,11 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         }
         
         logger.error("Failed to load committee draws", err);
-        setDrawsError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load committee draws.",
-        );
+        const errorMessage = err instanceof Error
+          ? err.message
+          : "Unable to load committee draws.";
+        setDrawsError(errorMessage);
+        showErrorToast(errorMessage);
       } finally {
         setDrawsLoading(false);
       }
@@ -429,7 +430,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       ? Number(params.status)
       : analysis?.committeeStatus;
   const baseStartDateString = params.startDate ?? analysis?.startCommitteeDate;
-  const baseCommitteeType = params.committeeType || "----------"; // Get committee type from params or analysis
+  const baseCommitteeType = params.committeeType || "—"; // Get committee type from params or analysis
 
   const isActive = baseStatus === 1;
   const formattedAmount =
@@ -614,7 +615,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         </View>
       );
     }
-
+    // Draw section
     const renderDraw: ListRenderItem<CommitteeDrawItem> = ({ item }) => {
       const drawDate = new Date(item.committeeDrawDate);
       const drawDateLabel = Number.isNaN(drawDate.getTime())
@@ -642,9 +643,9 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
       const isLottery = committeeType === "LOTTERY";
 
       const handleDrawPress = () => {
-        logger.log("Draw card pressed:", { committeeId, drawId: item.id });
+        logger.log("Draw card pressed:", { committeeId, drawId: item.id, committeeType, isDrawCompleted });
         router.push(
-          `/committee/${committeeId}/draw/${item.id}` as any,
+          `/committee/${committeeId}/draw/${item.id}?committeeType=${committeeType}&isDrawCompleted=${isDrawCompleted}` as any,
         );
       };
 
@@ -733,7 +734,7 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         {/* <TouchableOpacity onPress={handleBack} hitSlop={10}>
           <Text style={styles.backText}>◀ Back</Text>
         </TouchableOpacity> */}
-        <Text style={styles.headerTitle}>Committee details</Text>
+        <Text style={styles.headerTitle}>Committee Details</Text>
         <View style={{ width: 48 }} />
       </View>
 

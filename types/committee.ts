@@ -10,6 +10,7 @@ export interface CommitteeItem {
   extraDaysForFine: number;
   startCommitteeDate: string;
   committeeType?: string; // Optional field for committee type
+  lotteryAmount?: number;
 }
 
 export interface CommitteeListResponse {

@@ -2,11 +2,11 @@ import { logoutUser } from "@/api/auth";
 import { useAuth } from "@/context/AuthContext";
 import { colors } from "@/theme/colors";
 import { logger } from "@/utils/logger";
+import { showErrorToast, showSuccessToast } from "@/utils/toast";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-    Alert,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -34,16 +34,14 @@ const ProfileScreen = (): React.JSX.Element => {
       });
 
       await clearAuth();
-      // Alert.alert("Logged out", "You have been logged out successfully.");
+      showSuccessToast("Logged out successfully");
       router.replace("/");
     } catch (error) {
       logger.error("Logout failed", error);
-      Alert.alert(
-        "Logout failed",
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
-      );
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again.";
+      showErrorToast(errorMessage);
     } finally {
       setIsLoggingOut(false);
     }

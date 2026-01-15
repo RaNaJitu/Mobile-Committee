@@ -4,7 +4,7 @@
  */
 
 import { API_BASE_URL } from "@/config/env";
-import { handleApiError, type SessionExpiredError } from "@/utils/apiErrorHandler";
+import { handleApiError, SessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
 
 type SessionExpiredHandler = () => Promise<void>;

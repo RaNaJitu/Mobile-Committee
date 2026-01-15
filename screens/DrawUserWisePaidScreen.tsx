@@ -2,13 +2,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    ListRenderItem,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  ListRenderItem,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +18,7 @@ import { colors } from "@/theme/colors";
 import type { DrawUserWisePaidItem } from "@/types/committee";
 import { isSessionExpiredError } from "@/utils/apiErrorHandler";
 import { logger } from "@/utils/logger";
+import { showErrorToast, showSuccessToast } from "@/utils/toast";
 
 const DrawUserWisePaidScreen = (): React.JSX.Element => {
   const { token } = useAuth();
@@ -25,10 +26,15 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
   const params = useLocalSearchParams<{
     id?: string;
     drawId?: string;
+    committeeType?: string;
+    isDrawCompleted?: string;
   }>();
 
   const committeeId = Number(params.id);
   const drawId = Number(params.drawId);
+  const committeeType = params.committeeType;
+  // Convert string param to boolean (route params are always strings)
+  const isDrawCompleted = params.isDrawCompleted === "true" || params.isDrawCompleted === "1";
 
   const [items, setItems] = useState<DrawUserWisePaidItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,9 +63,12 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       
       // Handle specific error cases
       if (errorMessage.toLowerCase().includes("not started")) {
-        setError("This draw has not been started yet. Payment records will be available once the draw begins.");
+        const message = "This draw has not been started yet. Payment records will be available once the draw begins.";
+        setError(message);
+        showErrorToast(message);
       } else {
         setError(errorMessage);
+        showErrorToast(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -82,13 +91,20 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
 
     try {
       setUpdatingUserId(item.userId);
-      await updateDrawUserWisePaid(
+      const response = await updateDrawUserWisePaid(
         token,
         item.committeeId,
         item.userId,
         item.drawId,
         item.user.userDrawAmountPaid,
       );
+      
+      // Show success message if available from API response
+      if (response.message) {
+        showSuccessToast(response.message);
+      } else {
+        showSuccessToast("Payment updated successfully");
+      }
       
       // Reload the data to show updated values
       await loadData();
@@ -100,7 +116,7 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
       
       logger.error("Failed to update payment", err);
       const errorMessage = err instanceof Error ? err.message : "Unable to update payment.";
-      setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setUpdatingUserId(null);
     }
@@ -132,10 +148,12 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
               <Text style={styles.amountLabel}>Fine Amount Paid:</Text>
               <Text style={styles.amountValue}>₹{formattedFineAmount}</Text>
             </View>
+            <View style={styles.hr} />
             <View style={styles.amountItem}>
               <Text style={styles.amountLabel}>Total Amount Paid:</Text>
               <Text style={styles.amountValue}>₹{formattedTotalAmount}</Text>
             </View>
+            {isDrawCompleted === false ? (
             <TouchableOpacity
               style={[
                 styles.timerPill,
@@ -158,6 +176,7 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
                 </Text>
               )}
             </TouchableOpacity>
+            ) : null}
           </View>
         </View>
         <View >
@@ -213,6 +232,11 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
 };
 
 const styles = StyleSheet.create({
+  hr: {
+    height: 1,
+    backgroundColor: colors.textSecondary,
+    marginVertical: 8,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: colors.screenBackground,
@@ -253,6 +277,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+    opacity: 1,
+    boxShadow: "0px 2px 0px 0px rgba(10, 118, 180, 0.71)",
   },
   avatar: {
     width: 48,

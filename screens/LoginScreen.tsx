@@ -7,19 +7,19 @@ import type {
   UserRole,
 } from "@/types/auth";
 import { logger } from "@/utils/logger";
+import { showErrorToast, showSuccessToast } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -103,15 +103,17 @@ const LoginScreen = (): React.JSX.Element => {
         },
       });
 
+      // Show success message
+      const successMessage = anyResponse?.message || anyResponse?.data?.message || "Login successful";
+      showSuccessToast(successMessage);
+      
       router.replace("/(tabs)/committee");
     } catch (error) {
       logger.error("Login failed", error);
-      Alert.alert(
-        "Login failed",
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
-      );
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again.";
+      showErrorToast(errorMessage);
     } finally {
       setIsSigningIn(false);
     }
@@ -150,15 +152,17 @@ const LoginScreen = (): React.JSX.Element => {
         },
       });
 
+      // Show success message
+      const successMessage = anyResponse?.message || anyResponse?.data?.message || "Registration successful";
+      showSuccessToast(successMessage);
+      
       router.replace("/(tabs)/committee");
     } catch (error) {
       logger.error("Sign up failed", error);
-      Alert.alert(
-        "Sign up failed",
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
-      );
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again.";
+      showErrorToast(errorMessage);
     } finally {
       setIsSigningUp(false);
     }
