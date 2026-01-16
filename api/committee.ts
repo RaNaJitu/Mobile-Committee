@@ -123,19 +123,37 @@ export async function updateLotteryResult(
   drawId: number,
   userDrawAmountPaid: number,
 ): Promise<{ success: boolean; message?: string }> {
-  const response = await apiClient.patch<{ success?: boolean; message?: string }>(
-    "/draw/lottery-result-update",
-    {
-      committeeId,
-      userId,
-      drawId,
-      userDrawAmountPaid,
-    },
-    token,
-  );
+  try {
+    const response = await apiClient.patch<{ success?: boolean; message?: string; error?: string }>(
+      "/draw/lottery-result-update",
+      {
+        committeeId,
+        userId,
+        drawId,
+        userDrawAmountPaid,
+      },
+      token,
+    );
 
-  return {
-    success: response.success ?? true,
-    message: response.message,
-  };
+    return {
+      success: response.success ?? true,
+      message: response.message || response.error,
+    };
+  } catch (error) {
+    // Extract error message from various error formats
+    let errorMessage = "Failed to submit lottery result";
+    
+    if (error instanceof Error) {
+      errorMessage = error.message || errorMessage;
+    } else if (typeof error === "object" && error !== null) {
+      const errObj = error as any;
+      errorMessage = errObj.message || errObj.error || errObj.toString() || errorMessage;
+    }
+    
+    // Return error response instead of throwing
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
 }

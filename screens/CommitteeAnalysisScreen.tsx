@@ -714,7 +714,6 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
         setMembersLoading(true);
         setMembersError(null);
         const response = await fetchCommitteeMembers(token, committeeId);
-        // console.log("==LOG== ~ loadMembers ~ response:", response)
         setMembers(response.data ?? []);
       } catch (err) {
         // Don't show error if session expired (redirect is already happening)
@@ -846,16 +845,15 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
   };
 
   const handleLotterySubmit = async () => {
-    if (!token || !lotteryResult || !selectedLotteryDraw || Number.isNaN(committeeId)) {
-      showErrorToast("Missing required information to submit lottery result");
-      // Close modal even on validation error
-      setLotteryModalVisible(false);
-      setLotteryResult(null);
-      setSelectedLotteryDraw(null);
-      return;
-    }
-
     try {
+      if (!token || !lotteryResult || !selectedLotteryDraw || Number.isNaN(committeeId)) {
+        showErrorToast("Missing required information to submit lottery result");
+        // Close modal even on validation error
+        setLotteryModalVisible(false);
+        setLotteryResult(null);
+        setSelectedLotteryDraw(null);
+        return;
+      }
       // Get userId from lottery result
       const userId = lotteryResult.userId;
       if (!userId) {
@@ -891,21 +889,51 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
           showSuccessToast("Lottery result submitted successfully!");
         }
       } else {
+        // Show error message from API response
         const errorMsg = response.message || "Failed to submit lottery result";
         showErrorToast(errorMsg);
       }
     } catch (err) {
-      // Close modal and reset state even on error
-      setLotteryModalVisible(false);
-      setLotteryResult(null);
-      setSelectedLotteryDraw(null);
+      try {
+        // Close modal and reset state even on error
+        setLotteryModalVisible(false);
+        setLotteryResult(null);
+        setSelectedLotteryDraw(null);
 
-      if (isSessionExpiredError(err)) {
-        return;
+        if (isSessionExpiredError(err)) {
+          return;
+        }
+        
+        logger.error("Failed to submit lottery result", err);
+        
+        // Extract error message from various error formats
+        let errorMessage = "Failed to submit lottery result";
+        if (err instanceof Error) {
+          errorMessage = err.message || errorMessage;
+        } else if (typeof err === "object" && err !== null) {
+          const errObj = err as any;
+          errorMessage = errObj.message || errObj.error || String(errObj) || errorMessage;
+        } else if (typeof err === "string") {
+          errorMessage = err;
+        }
+        
+        // Show error toast
+        showErrorToast(errorMessage);
+      } catch (errorHandlingError) {
+        // Final safety net - catch any unexpected errors that might occur during error handling
+        logger.error("Unexpected error in handleLotterySubmit error handler", errorHandlingError);
+        
+        // Ensure modal is closed and state is reset even if error handling fails
+        try {
+          setLotteryModalVisible(false);
+          setLotteryResult(null);
+          setSelectedLotteryDraw(null);
+          showErrorToast("An unexpected error occurred. Please try again.");
+        } catch (stateError) {
+          // If even state reset fails, log it but don't crash
+          logger.error("Error resetting state after lottery submit error", stateError);
+        }
       }
-      logger.error("Failed to submit lottery result", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to submit lottery result";
-      showErrorToast(errorMessage);
     }
   };
 
@@ -1241,13 +1269,22 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
               <Text style={styles.memberSecondary}>{secondary}</Text>
             ) : null}
           </View>
-          {/* Draw completion status indicator */}
+          {/* Draw completion status button */}
           <View
             style={[
-              styles.drawStatusIndicator,
-              isDrawCompleted ? styles.drawStatusCompleted : styles.drawStatusPending,
+              styles.drawStatusButton,
+              isDrawCompleted ? styles.drawStatusButtonYes : styles.drawStatusButtonNo,
             ]}
-          />
+          >
+            <Text
+              style={[
+                styles.drawStatusButtonText,
+                isDrawCompleted ? styles.drawStatusButtonTextYes : styles.drawStatusButtonTextNo,
+              ]}
+            >
+              {isDrawCompleted ? "YES" : "NO"}
+            </Text>
+          </View>
         </View>
       );
     };
@@ -1947,17 +1984,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
-  drawStatusIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+  drawStatusButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
     marginLeft: 8,
+    minWidth: 60,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  drawStatusCompleted: {
-    backgroundColor: "#22c55e", // Green for completed
+  drawStatusButtonYes: {
+    backgroundColor: "rgba(34, 245, 111, 0.42)", // Transparent dark green for completed
   },
-  drawStatusPending: {
-    backgroundColor: "#ef4444", // Red for pending/not completed
+  drawStatusButtonNo: {
+    backgroundColor: "rgba(235, 19, 19, 0.51)", // Transparent dark red for pending/not completed
+  },
+  drawStatusButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  drawStatusButtonTextYes: {
+    color: "#ffffff",
+  },
+  drawStatusButtonTextNo: {
+    color: "#ffffff",
   },
   emptyText: {
     fontSize: 14,
@@ -2044,7 +2095,7 @@ const styles = StyleSheet.create({
     borderColor: "#FFD700",
     backgroundColor: "rgba(224, 203, 15, 0.12)",
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
     marginLeft: "auto",
