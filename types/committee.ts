@@ -59,6 +59,7 @@ export interface CommitteeMemberUser {
 
 export interface CommitteeMemberItem {
   id?: number;
+  userId?: number;
   name?: string | null;
   memberName?: string | null;
   userName?: string | null;

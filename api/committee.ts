@@ -1,9 +1,9 @@
 import type {
-    CommitteeAnalysisResponse,
-    CommitteeDrawListResponse,
-    CommitteeListResponse,
-    CommitteeMemberListResponse,
-    DrawUserWisePaidResponse,
+  CommitteeAnalysisResponse,
+  CommitteeDrawListResponse,
+  CommitteeListResponse,
+  CommitteeMemberListResponse,
+  DrawUserWisePaidResponse,
 } from "@/types/committee";
 
 import { apiClient } from "@/utils/apiClient";
@@ -13,6 +13,7 @@ const COMMITTEE_ANALYSIS_PATH = "/committee/analysis";
 const COMMITTEE_MEMBERS_PATH = "/committee/member/get";
 const COMMITTEE_DRAWS_PATH = "/draw/get";
 const COMMITTEE_DRAW_USER_WISE_PAID_PATH = "/draw/user-wise-paid";
+const LOTTERY_RANDOM_USER_PATH = "/draw/lottery-random-user";
 
 export async function fetchCommitteeList(
   token: string,
@@ -97,6 +98,38 @@ export async function updateDrawAmount(
       committeeId,
       drawId,
       amount,
+    },
+    token,
+  );
+
+  return {
+    success: response.success ?? true,
+    message: response.message,
+  };
+}
+
+export async function fetchLotteryRandomUser(
+  token: string,
+  committeeId: number,
+): Promise<CommitteeMemberListResponse> {
+  const url = `${LOTTERY_RANDOM_USER_PATH}?committeeId=${encodeURIComponent(committeeId)}`;
+  return apiClient.get<CommitteeMemberListResponse>(url, token);
+}
+
+export async function updateLotteryResult(
+  token: string,
+  committeeId: number,
+  userId: number,
+  drawId: number,
+  userDrawAmountPaid: number,
+): Promise<{ success: boolean; message?: string }> {
+  const response = await apiClient.patch<{ success?: boolean; message?: string }>(
+    "/draw/lottery-result-update",
+    {
+      committeeId,
+      userId,
+      drawId,
+      userDrawAmountPaid,
     },
     token,
   );
