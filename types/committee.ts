@@ -103,6 +103,7 @@ export interface DrawUserWisePaidUser {
   role: string;
   userDrawAmountPaid: number;
   fineAmountPaid: number;
+  isUserDrawCompleted: boolean;
 }
 
 export interface DrawUserWisePaidItem {

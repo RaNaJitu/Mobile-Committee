@@ -1400,13 +1400,14 @@ const CommitteeAnalysisScreen = (): React.JSX.Element => {
     const renderDraw: ListRenderItem<CommitteeDrawItem> = ({ item }) => {
       const drawDate = new Date(item.committeeDrawDate);
       const drawDateLabel = Number.isNaN(drawDate.getTime())
-        ? "-"
-        : drawDate.toLocaleDateString();
+      ? "-"
+      : drawDate.toLocaleDateString();
       const drawTime = new Date(item.committeeDrawTime);
       const drawTimeLabel = Number.isNaN(drawTime.getTime())
-        ? "-"
-        : drawTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
+      ? "-"
+      : drawTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      
+      // console.log("==LOG== ~ renderDraw ~ drawDate:", drawDate, item.id, drawTime)
       const formattedDrawAmount = item.committeeDrawAmount.toLocaleString();
       const formattedPaidAmount = item.committeeDrawPaidAmount.toLocaleString();
       const formattedMinAmount = item.committeeDrawMinAmount.toLocaleString();
@@ -1994,10 +1995,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   drawStatusButtonYes: {
-    backgroundColor: "rgba(34, 245, 111, 0.42)", // Transparent dark green for completed
+    backgroundColor: "rgba(24, 247, 24, 0.43)", // Transparent dark green for completed
   },
   drawStatusButtonNo: {
-    backgroundColor: "rgba(235, 19, 19, 0.51)", // Transparent dark red for pending/not completed
+    backgroundColor: "rgba(248, 33, 33, 0.42)", // Transparent dark red for pending/not completed
   },
   drawStatusButtonText: {
     fontSize: 14,

@@ -127,8 +127,9 @@ const DrawUserWisePaidScreen = (): React.JSX.Element => {
     const formattedDrawAmount = Number(user.userDrawAmountPaid);
     const formattedFineAmount = Number(user.fineAmountPaid);
     const formattedTotalAmount = Number(Number(user.userDrawAmountPaid) + Number(user.fineAmountPaid)) ?? 0
+    const isUserDrawCompleted = item.user.isUserDrawCompleted;
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isUserDrawCompleted ? styles.cardCompleted : null]}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
             {user.name.charAt(0).toUpperCase()}
@@ -279,6 +280,12 @@ const styles = StyleSheet.create({
     elevation: 3,
     opacity: 1,
     boxShadow: "0px 2px 0px 0px rgba(10, 118, 180, 0.71)",
+  },
+  cardCompleted: {
+    backgroundColor: "rgba(34, 245, 111, 0.42)",
+  },
+  cardPending: {
+    backgroundColor: "rgba(235, 19, 19, 0.51)",
   },
   avatar: {
     width: 48,
